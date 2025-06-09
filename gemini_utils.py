@@ -9,6 +9,8 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 with open("faq_data.json", "r") as f:
     faqs = json.load(f)
 
+model = genai.GenerativeModel(model_name="models/chat-bison-001")
+
 def get_answer(user_question):
     context = "\n".join([f"Q: {f['question']}\nA: {f['answer']}" for f in faqs])
     prompt = f"""
@@ -17,9 +19,5 @@ You are a helpful assistant. Use the following FAQ context to answer:
 User Question: {user_question}
 Answer:
 """
-
-    response = genai.chat.completions.create(
-        model="models/chat-bison-001",
-        messages=[{"author": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
+    response = model.generate_content(prompt)
+    return response.text.strip()
