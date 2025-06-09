@@ -33,49 +33,40 @@
 
 
 
-
 import os
-import json
+import requests
 from dotenv import load_dotenv
-from PIL import Image
 
 load_dotenv()
 
-# Replace 'groq' with the actual SDK package if it exists
-try:
-    import groq  # assuming actual SDK is named groq
-except ImportError:
-    raise ImportError("Groq SDK not installed. Please run: pip install groq")
+API_KEY = os.getenv("GROQ_API_KEY")
+API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Initialize client with API key only
-client = groq.Client(api_key=os.getenv("GROQ_API_KEY"))
+def get_answer(user_question):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {API_KEY}"
+    }
 
-with open("faq_data.json", "r") as f:
-    faqs = json.load(f)
+    payload = {
+        "model": "llama-3.3-70b-versatile",  # Use your Groq model here
+        "messages": [
+            {
+                "role": "user",
+                "content": user_question
+            }
+        ]
+    }
 
-def get_answer(user_question, image_path=None):
-    context = "\n".join([f"Q: {f['question']}\nA: {f['answer']}" for f in faqs])
-    prompt = f"""
-You are a helpful assistant. Use the following FAQ context to answer:
-{context}
-User Question: {user_question}
-Answer:
-""".strip()
+    response = requests.post(API_URL, headers=headers, json=payload)
 
-    if image_path:
-        with open(image_path, "rb") as img_file:
-            img_bytes = img_file.read()
-        # Assuming the client has a method to handle vision+text inputs
-        response = client.generate(
-            model="vision-model",
-            inputs={"text": prompt, "image_bytes": img_bytes}
-        )
+    if response.status_code == 200:
+        data = response.json()
+        # Extract the assistant's reply from the response JSON
+        return data['choices'][0]['message']['content']
     else:
-        response = client.generate(
-            model="text-model",
-            inputs={"text": prompt}
-        )
+        return f"Error: {response.status_code} - {response.text}"
 
-    # Adjust depending on SDK response format
-    return response.text if hasattr(response, 'text') else response.get('text', '')
-
+# Example usage:
+question = "Explain the importance of fast language models"
+print(get_answer(question))
