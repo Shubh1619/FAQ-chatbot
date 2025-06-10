@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI FAQ Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .message {
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #6b7280;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <div class="container mx-auto max-w-3xl flex-grow flex flex-col p-4">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow p-4 mb-4 flex items-center">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white mr-3">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold">AI FAQ Assistant</h1>
+                <p class="text-sm text-gray-500">Ask me anything about our services</p>
+            </div>
+        </header>
+
+        <!-- Chat Container -->
+        <div class="flex-grow bg-white rounded-lg shadow p-4 mb-4 overflow-y-auto" id="chatContainer">
+            <div class="space-y-4" id="chatMessages">
+                <!-- Welcome Message -->
+                <div class="flex">
+                    <div class="message bg-gray-100 rounded-r-lg rounded-bl-lg p-3">
+                        <div class="flex items-center mb-1">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                                <i class="fas fa-robot text-blue-500 text-xs"></i>
+                            </div>
+                            <span class="font-medium text-sm">FAQ Bot</span>
+                        </div>
+                        <p class="text-gray-800">Hello! I'm here to help answer your questions. What would you like to know?</p>
+                    </div>
+                </div>
+
+                {% if question %}
+                <!-- User Question -->
+                <div class="flex justify-end">
+                    <div class="message bg-blue-500 text-white rounded-l-lg rounded-br-lg p-3">
+                        <p>{{ question }}</p>
+                    </div>
+                </div>
+
+                <!-- Bot Answer -->
+                <div class="flex">
+                    <div class="message bg-gray-100 rounded-r-lg rounded-bl-lg p-3">
+                        <div class="flex items-center mb-1">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                                <i class="fas fa-robot text-blue-500 text-xs"></i>
+                            </div>
+                            <span class="font-medium text-sm">FAQ Bot</span>
+                        </div>
+                        <div class="text-gray-800">
+                            {% if answer.startswith('Error:') %}
+                                <p class="text-red-500">{{ answer }}</p>
+                            {% else %}
+                                {{ answer | safe }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Input Form -->
+        <form method="post" action="/" class="bg-white rounded-lg shadow p-4" id="chatForm">
+            <div class="flex space-x-2">
+                <input type="text" name="question" id="userInput" 
+                    class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Type your question here..." required
+                    value="{{ question or '' }}">
+                <button type="submit" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2 transition-colors">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </form>
+
+        {% if answer and not answer.startswith('Error:') %}
+        <!-- Feedback Section -->
+        <div class="bg-white rounded-lg shadow p-4 mt-2 flex justify-between items-center" id="feedbackSection">
+            <p class="text-sm text-gray-600">Was this answer helpful?</p>
+            <div class="flex space-x-2">
+                <form method="post" action="/feedback" class="inline">
+                    <input type="hidden" name="question" value="{{ question }}">
+                    <input type="hidden" name="answe_feedback" value="positive" 
+                        class="bg-green-100 text-grer" value="{{ answer }}">
+                    <button type="submit" name="useren-800 px-3 py-1 rounded-lg text-sm hover:bg-green-200 transition-colors">
+                        <i class="fas fa-thumbs-up mr-1"></i> Yes
+                    </button>
+                </form>
+                <form method="post" action="/feedback" class="inline">
+                    <input type="hidden" name="question" value="{{ question }}">
+                    <input type="hidden" name="answer" value="{{ answer }}">
+                    <button type="submit" name="user_feedback" value="negative" 
+                        class="bg-red-100 text-red-800 px-3 py-1 rounded-lg text-sm hover:bg-red-200 transition-colors">
+                        <i class="fas fa-thumbs-down mr-1"></i> No
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.getElementById('chatContainer');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatForm = document.getElementById('chatForm');
+            const userInput = document.getElementById('userInput');
+            
+            // Scroll to bottom of chat
+            function scrollToBottom() {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Add typing indicator
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'flex';
+                typingDiv.innerHTML = `
+                    <div class="message bg-gray-100 rounded-r-lg rounded-bl-lg p-3">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                `;
+                chatMessages.appendChild(typingDiv);
+                scrollToBottom();
+                return typingDiv;
+            }
+            
+            // Handle form submission
+            chatForm.addEventListener('submit', function() {
+                const question = userInput.value.trim();
+                if (question) {
+                    // Show typing indicator while waiting for response
+                    showTypingIndicator();
+                }
+            });
+            
+            // Scroll to bottom initially
+            scrollToBottom();
+            
+            // Focus input field on load
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
